@@ -15,20 +15,23 @@ class ChatView(ctk.CTkScrollableFrame):
             bg_color = ("#D1E8FF", "#1E3A8A")
             align = "e"
             anchor = "e"
+            sticky = "e"
             text_color = ("black", "white")
         elif role == "assistant":
             bg_color = ("#E5E7EB", "#374151")
             align = "w"
             anchor = "w"
+            sticky = "w"
             text_color = ("black", "white")
         else: # system or error
             bg_color = ("#FFD1D1", "#7F1D1D")
             align = "center"
             anchor = "center"
+            sticky = ""
             text_color = ("black", "white")
 
         msg_frame = ctk.CTkFrame(self, fg_color="transparent")
-        msg_frame.grid(row=len(self._messages), column=0, sticky=anchor, pady=5, padx=10)
+        msg_frame.grid(row=len(self._messages), column=0, sticky=sticky, pady=5, padx=10)
 
         # Name label
         name = role.capitalize()
