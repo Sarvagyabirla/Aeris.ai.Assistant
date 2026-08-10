@@ -1,6 +1,7 @@
 from typing import Callable, Dict, List, Any
 import asyncio
 
+
 class EventManager:
     def __init__(self):
         self._subscribers: Dict[str, List[Callable]] = {}
@@ -18,8 +19,10 @@ class EventManager:
                 else:
                     callback(**kwargs)
 
+
 # Singleton event manager
 event_manager = EventManager()
+
 
 # Predefined Event Types
 class Events:

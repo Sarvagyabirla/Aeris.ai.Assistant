@@ -1,45 +1,40 @@
 # Aeris AI Assistant
 
-Aeris is a modular, autonomous AI assistant. 
+Aeris is a powerful, modular, secure, and extensible personal AI assistant designed for real-world interaction, computer operation, file management, and autonomous multi-step task execution.
 
-This repository currently implements **PART 1: Core Foundation**.
+## Current Limitations & Known Issues
 
-## Current Roadmap
-- **PART 1 → Core Foundation (COMPLETE)**
-- PART 2 → Computer Control (FUTURE)
-- PART 3 → Autonomous Agent (FUTURE)
-- PART 4 → Intelligence + Memory (FUTURE)
-- PART 5 → Advanced Aeris Ecosystem (FUTURE)
+- **AI API Quotas**: If you are using a free tier API key (e.g., Gemini Free Tier), you may experience `429 RESOURCE_EXHAUSTED` errors if you exceed requests per minute. Aeris handles this gracefully by reverting to degraded offline mode.
+- **Voice Control**: Voice input/output (Speech-to-Text / Text-to-Speech) is currently **NOT IMPLEMENTED**. Text interface must be used.
+- **File Downloads**: Direct file downloading from the browser is currently unsupported for security reasons.
 
-## Architecture (Part 1)
-The application is structured into clearly separated modules to ensure future extensibility:
-- `core`: Coordinates application logic, context management, and pub/sub events.
-- `ai`: Abstracts the AI provider (currently `google-genai` for Gemini).
-- `config`: Handles environment settings safely.
-- `security`: Ensures secrets are not leaked in logs or memory.
-- `memory`: Foundation for tracking session history.
-- `tools`: Registry for future tool definitions.
-- `ui`: A CustomTkinter asynchronous desktop interface.
-- `logging`: Filtered structured logging.
+## Vision
+To act as a capable, real-world personal assistant (inspired by concepts like JARVIS) focusing on modular design, extreme security, robust context management, and systematic testing.
 
-## Installation
-1. Install Python 3.10+
-2. Create a virtual environment: `python -m venv venv`
-3. Activate it: `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (Mac/Linux)
-4. Install dependencies: `pip install -r requirements.txt`
+## Key Capabilities
+- **Modular Core:** Easy-to-extend flow architectures (`CodingFlow`) alongside configurable context managers.
+- **Autonomous Agent Loop:** Dynamic tool execution utilizing LLM `FunctionCalling` with automated error recovery.
+- **Computer Operation:** Interacts securely with system elements (Keyboard, Mouse, Screen, FS, Commands) under tightly controlled scopes.
+- **Robust Security boundaries:** A `PermissionManager` and global `KillSwitch` control execution safety. Read/Write path boundaries encapsulate tools.
+- **Persistent Memory:** Contextual memory separation to maintain user privacy without cross-contamination.
 
-## Configuration
-1. Copy `.env.example` to `.env`.
-2. Add your AI API key (e.g., `AERIS_API_KEY`).
-3. Set the model name if desired.
+## Comprehensive Test Architecture
+The Aeris ecosystem has been systematically evaluated through an extensive unified test suite:
+1. **Core Foundation & Security**: Validates unit components, `PermissionManager`, `KillSwitch` boundaries, and performs UI smoke tests.
+2. **Computer Control Safety**: Tests that all local computer control actions obey absolute `dry_run` modes and strictly observe permitted file system boundaries (`settings.allowed_paths`).
+3. **Agent & Recovery**: Evaluates autonomous tool-loop recovery mechanisms. Simulates catastrophic local exceptions gracefully being returned to the AI for self-correction.
+4. **Memory & Context**: Assesses cross-instance memory boundaries preventing data leaks between distinct sessions.
+5. **Ecosystem Workflows**: End-to-end regression verifying physical writes strictly within isolated temp boundaries and context flow overrides.
 
-## Usage
-Run the application:
+## Running Tests
+Run the complete, robust test suite covering all 5 architectural segments using:
 ```bash
-python -m aeris
+$env:PYTHONPATH="."
+pytest tests/
 ```
 
-## Security
-- API keys are never printed in logs.
-- `.env` is ignored by Git.
-- Provider errors are handled gracefully in the UI without crashing the application.
+## Running the Application
+```bash
+$env:PYTHONPATH="."
+python -m aeris.main
+```

@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
+
 class Tool(ABC):
     """Base class for all Aeris tools."""
-    
+
     name: str = "UnknownTool"
     description: str = "No description provided."
     parameters: Dict[str, Any] = {}
@@ -12,7 +13,6 @@ class Tool(ABC):
     @abstractmethod
     async def execute(self, **kwargs) -> Any:
         """Execute the tool's core logic."""
-        pass
 
     def validate(self, **kwargs) -> bool:
         """Validate input parameters before execution."""

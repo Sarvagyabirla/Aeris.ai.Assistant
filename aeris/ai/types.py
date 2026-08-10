@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Any, Dict
 from aeris.core.conversation import Message
 
+
 @dataclass
 class AIRequest:
     messages: List[Message]
@@ -9,6 +10,7 @@ class AIRequest:
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     tools: List[Any] = field(default_factory=list)
+
 
 @dataclass
 class AIResponse:

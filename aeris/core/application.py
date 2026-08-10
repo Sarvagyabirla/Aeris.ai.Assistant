@@ -1,14 +1,13 @@
-import asyncio
-from typing import Optional
 
 from aeris.core.conversation import Conversation
 from aeris.core.context import ContextManager
 from aeris.core.events import event_manager, Events
 from aeris.ai.gemini_provider import GeminiProvider
-from aeris.ai.types import AIRequest
 from aeris.memory.interface import SessionMemory
 from aeris.tools.registry import ToolRegistry
-from aeris.logging.logger import log
+from aeris.app_logger.logger import log
+from aeris.tools.computer import get_all_computer_tools
+
 
 class AerisCore:
     def __init__(self):
@@ -18,50 +17,45 @@ class AerisCore:
         self.memory = SessionMemory()
         self.tool_registry = ToolRegistry()
         self.is_online = False
+        self.agent = None
 
     async def initialize(self):
         """Startup sequence."""
         log.info("Initializing Aeris Core...")
-        
+
+        # Initialize Agent with current provider
+        from aeris.core.agent import AerisAgent
+
+        self.agent = AerisAgent(
+            self.provider, self.conversation, self.context_manager, self.tool_registry
+        )
+
+        # Register tools
+        for tool in get_all_computer_tools():
+            self.tool_registry.register(tool)
+        log.info(f"Registered {len(self.tool_registry.get_all_tools())} tools.")
+
         # Validate AI provider connection
         self.is_online = await self.provider.validate_connection()
         if self.is_online:
-            log.info(f"Connected to AI Provider: {self.provider.get_model_information()}")
+            log.info(
+                f"Connected to AI Provider: {self.provider.get_model_information()}"
+            )
         else:
-            log.error("Failed to connect to AI Provider. Running in degraded offline mode.")
-            
+            log.error(
+                "Failed to connect to AI Provider. Running in degraded offline mode."
+            )
+
         await event_manager.emit(Events.APPLICATION_STARTED)
         return self.is_online
 
     async def process_user_message(self, text: str) -> str:
         """Process a message from the user."""
         log.info("Processing user message.")
-        
-        # 1. Add to conversation
-        self.conversation.add_message("user", text)
-        await event_manager.emit(Events.USER_MESSAGE_RECEIVED, message=text)
-        
+
         if not self.is_online:
             err = "Aeris is currently offline and cannot process requests."
-            self.conversation.add_message("system", err)
+            self.conversation.add_message("system", content=err)
             return err
 
-        # 2. Get Context
-        messages = self.context_manager.get_prompt_context()
-        
-        # 3. Create Request
-        request = AIRequest(messages=messages)
-        
-        # 4. Send to Provider
-        await event_manager.emit(Events.AI_REQUEST_STARTED)
-        response = await self.provider.send_message(request)
-        await event_manager.emit(Events.AI_RESPONSE_RECEIVED)
-        
-        # 5. Handle Response
-        if response.is_success:
-            self.conversation.add_message("assistant", response.content)
-            return response.content
-        else:
-            err_msg = f"Error communicating with AI: {response.error}"
-            self.conversation.add_message("system", err_msg)
-            return err_msg
+        return await self.agent.run(text)
