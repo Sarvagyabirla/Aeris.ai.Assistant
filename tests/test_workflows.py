@@ -11,6 +11,8 @@ from aeris.flows.coding import CodingFlow
 from aeris.tools.computer.fs import FileSystemTool
 from aeris.config.settings import settings
 
+pytestmark = pytest.mark.integration
+
 
 class MockProvider:
     def __init__(self, responses):

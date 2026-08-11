@@ -27,10 +27,16 @@ The Aeris ecosystem has been systematically evaluated through an extensive unifi
 5. **Ecosystem Workflows**: End-to-end regression verifying physical writes strictly within isolated temp boundaries and context flow overrides.
 
 ## Running Tests
-Run the complete, robust test suite covering all 5 architectural segments using:
+Run the complete, robust test suite covering all architectural segments using:
 ```bash
 $env:PYTHONPATH="."
 pytest tests/
+```
+
+You can also run specific subsets of tests using markers:
+```bash
+pytest -m "integration" tests/
+pytest -m "computer" tests/
 ```
 
 ## Running the Application

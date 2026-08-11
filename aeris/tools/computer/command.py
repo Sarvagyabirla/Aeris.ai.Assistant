@@ -14,25 +14,27 @@ class CommandTool(Tool):
     parameters = {
         "action": {"type": "string", "enum": ["execute"]},
         "command": {"type": "string", "description": "Command to execute"},
+        "confirmed": {"type": "boolean", "description": "Set to True only if the user has explicitly confirmed this action."}
     }
 
     async def execute(self, **kwargs) -> ToolResult:
+        action = kwargs.get("action")
+        command = kwargs.get("command", "")
+        confirmed = kwargs.get("confirmed", False)
+
+        if not command:
+            return ToolResult(False, self.name, action, "", error="command required")
+
         if not PermissionManager.check_execution_allowed(
-            self.name, self.permission_level
+            self.name, self.permission_level, confirmed=confirmed, details=command
         ):
             return ToolResult(
                 False,
                 self.name,
-                str(kwargs.get("action")),
+                str(action),
                 "Blocked by security manager",
                 error="Blocked",
             )
-
-        action = kwargs.get("action")
-        command = kwargs.get("command", "")
-
-        if not command:
-            return ToolResult(False, self.name, action, "", error="command required")
 
         # Parse command safely
         try:
@@ -63,11 +65,9 @@ class CommandTool(Tool):
             )
 
         try:
-            # Use subprocess run with a timeout to prevent hanging
-            use_shell = os.name == "nt"
-            cmd_args = command if use_shell else parts
+            # DO NOT USE shell=True to prevent command injection
             process = subprocess.run(
-                cmd_args, capture_output=True, text=True, timeout=settings.action_timeout, shell=use_shell
+                parts, capture_output=True, text=True, timeout=settings.action_timeout, shell=False
             )
 
             output = process.stdout

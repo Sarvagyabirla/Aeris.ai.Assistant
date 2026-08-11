@@ -21,14 +21,16 @@ class FileSystemTool(Tool):
         "path": {"type": "string"},
         "dest_path": {"type": "string"},
         "content": {"type": "string"},
+        "confirmed": {"type": "boolean", "description": "Set to True only if the user has explicitly confirmed this action."}
     }
 
     def _is_path_allowed(self, target_path: str) -> bool:
         """Check if a path is within the allowed paths."""
         try:
-            target = Path(target_path).resolve()
+            # Resolve symlinks and absolute path
+            target = Path(os.path.realpath(target_path)).resolve()
             for allowed in settings.allowed_paths:
-                allowed_path = Path(allowed).resolve()
+                allowed_path = Path(os.path.realpath(allowed)).resolve()
                 # Check if target is same as or child of allowed path
                 if target == allowed_path or allowed_path in target.parents:
                     return True
@@ -38,13 +40,20 @@ class FileSystemTool(Tool):
 
     async def execute(self, **kwargs) -> ToolResult:
         action = kwargs.get("action")
-
-        # Deletes are HIGH_RISK, everything else is MEDIUM_RISK
+        confirmed = kwargs.get("confirmed", False)
+        
+        # Deletes and moves out of standard flow might be HIGH_RISK
         req_level = (
-            PermissionLevel.HIGH_RISK if action == "delete" else self.permission_level
+            PermissionLevel.HIGH_RISK if action in ["delete", "move"] else self.permission_level
         )
 
-        if not PermissionManager.check_execution_allowed(self.name, req_level):
+        path = kwargs.get("path", "")
+        if not path:
+            return ToolResult(False, self.name, str(action), "", error="path required")
+            
+        details = f"{action} on {path}"
+
+        if not PermissionManager.check_execution_allowed(self.name, req_level, confirmed=confirmed, details=details):
             return ToolResult(
                 False,
                 self.name,
@@ -52,10 +61,6 @@ class FileSystemTool(Tool):
                 "Blocked by security manager",
                 error="Blocked",
             )
-
-        path = kwargs.get("path", "")
-        if not path:
-            return ToolResult(False, self.name, str(action), "", error="path required")
 
         if not self._is_path_allowed(path):
             return ToolResult(

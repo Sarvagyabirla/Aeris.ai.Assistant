@@ -1,4 +1,4 @@
-import pyautogui
+
 from aeris.tools.tool import Tool
 from aeris.tools.security import PermissionLevel, PermissionManager
 from aeris.tools.types import ToolResult
@@ -43,6 +43,7 @@ class KeyboardTool(Tool):
             )
 
         try:
+            import pyautogui
             if action == "type":
                 text = kwargs.get("text", "")
                 pyautogui.write(text, interval=0.01)

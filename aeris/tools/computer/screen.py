@@ -1,5 +1,4 @@
-import pyautogui
-from PIL import ImageGrab
+
 import os
 import time
 from aeris.tools.tool import Tool
@@ -43,6 +42,8 @@ class ScreenTool(Tool):
             )
 
         try:
+            import pyautogui
+            from PIL import ImageGrab
             if action == "dimensions":
                 width, height = pyautogui.size()
                 return ToolResult(

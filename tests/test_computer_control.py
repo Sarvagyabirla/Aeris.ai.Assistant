@@ -11,6 +11,8 @@ from aeris.tools.computer.command import CommandTool
 from aeris.tools.security import kill_switch
 from aeris.config.settings import settings
 
+pytestmark = pytest.mark.computer
+
 
 # Test environment setup
 @pytest.fixture(autouse=True)
@@ -70,19 +72,23 @@ async def test_fs_tool_allowed_paths():
 
 @pytest.mark.asyncio
 async def test_command_tool_allowlist():
+    from aeris.tools.security import PermissionRequiredError
     tool = CommandTool()
 
-    # Not in allowlist
-    result = await tool.execute(action="execute", command="rm -rf /")
+    # High risk tools now raise PermissionRequiredError when confirmed=False
+    with pytest.raises(PermissionRequiredError):
+        await tool.execute(action="execute", command="rm -rf /")
+
+    # If confirmed, it should fail due to allowlist
+    result = await tool.execute(action="execute", command="rm -rf /", confirmed=True)
     assert result.success is False
     assert "not in the allowlist" in result.error
 
-    # In allowlist
-    # Temporarily add 'echo' if not present
+    # In allowlist and confirmed
     original_allowlist = settings.command_allowlist
     settings.command_allowlist = ["echo"]
 
-    result = await tool.execute(action="execute", command="echo hello")
+    result = await tool.execute(action="execute", command="echo hello", confirmed=True)
     assert result.success is True
     assert "[DRY RUN]" in result.result
 

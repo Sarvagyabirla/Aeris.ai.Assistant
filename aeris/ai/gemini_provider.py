@@ -123,9 +123,15 @@ class GeminiProvider(AIProvider):
             return AIResponse(content=content_text, tool_calls=tool_calls)
 
         except APIError as e:
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                log.error(f"Gemini API Quota Exceeded (429): {e}")
+                return AIResponse(
+                    content="", error="API Quota Exceeded (429 RESOURCE_EXHAUSTED). Please wait and try again or check your API key limits.", is_success=False
+                )
             log.error(f"Gemini API Error: {e}")
             return AIResponse(
-                content="", error=f"API Error: {str(e)}", is_success=False
+                content="", error=f"API Error: {err_msg}", is_success=False
             )
         except Exception as e:
             log.error(f"Unexpected error in Gemini Provider: {e}")
@@ -172,8 +178,13 @@ class GeminiProvider(AIProvider):
                 yield AIResponse(content=chunk.text or "")
 
         except APIError as e:
-            log.error(f"Gemini API Error during stream: {e}")
-            yield AIResponse(content="", error=f"API Error: {str(e)}", is_success=False)
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                log.error(f"Gemini API Quota Exceeded (429) during stream: {e}")
+                yield AIResponse(content="", error="API Quota Exceeded (429 RESOURCE_EXHAUSTED). Please wait and try again or check your API key limits.", is_success=False)
+            else:
+                log.error(f"Gemini API Error during stream: {e}")
+                yield AIResponse(content="", error=f"API Error: {err_msg}", is_success=False)
         except Exception as e:
             log.error(f"Unexpected error in Gemini Provider stream: {e}")
             yield AIResponse(

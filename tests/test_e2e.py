@@ -2,6 +2,8 @@ import pytest
 from aeris.core.application import AerisCore
 from aeris.ai.types import AIResponse
 
+pytestmark = pytest.mark.integration
+
 
 # A mock provider to inject into the core for testing
 class MockProvider:

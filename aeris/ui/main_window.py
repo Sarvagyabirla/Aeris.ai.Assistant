@@ -1,134 +1,95 @@
 import asyncio
-import customtkinter as ctk
 from threading import Thread
+import customtkinter as ctk
 
 from aeris.core.application import AerisCore
-from aeris.ui.status_bar import StatusBar
-from aeris.ui.chat_view import ChatView
-from aeris.config.settings import settings
-from aeris.tools.security import kill_switch
-
+from aeris.ui.state import ui_state
+from aeris.ui.monitor import SystemMonitor
+from aeris.ui.components.sidebar import Sidebar
+from aeris.ui.views.chat import ChatView
+from aeris.ui.views.system import SystemView
+from aeris.ui.views.tasks import TaskView
+from aeris.ui.views.security import SecurityView
 
 class MainWindow(ctk.CTk):
     def __init__(self, core: AerisCore):
         super().__init__()
         self.core = core
-
-        self.title("Aeris Assistant")
-        self.geometry("800x600")
-        self.minsize(400, 500)
-
-        # Configure grid
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-
-        # Status Bar
-        self.status_bar = StatusBar(self, height=30, fg_color=("gray85", "gray15"))
-        self.status_bar.grid(row=0, column=0, sticky="ew")
-
-        # Security Controls Frame
-        self.security_frame = ctk.CTkFrame(self, fg_color="transparent", height=30)
-        self.security_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
-
-        # Kill Switch Button
-        self.kill_btn = ctk.CTkButton(
-            self.security_frame,
-            text="KILL SWITCH (ACTIVE)" if kill_switch.is_active else "KILL SWITCH",
-            fg_color="red" if kill_switch.is_active else "gray",
-            command=self._toggle_kill_switch,
-            width=120,
-        )
-        self.kill_btn.pack(side="left", padx=5)
-
-        # Dry Run Indicator
-        self.dry_run_label = ctk.CTkLabel(
-            self.security_frame,
-            text=f"Dry Run: {'ON' if settings.dry_run else 'OFF'}",
-            text_color="orange" if settings.dry_run else "gray",
-        )
-        self.dry_run_label.pack(side="right", padx=5)
-
-        # Adjust grid for Chat View
-        self.grid_rowconfigure(2, weight=1)
-
-        # Chat View
-        self.chat_view = ChatView(self)
-        self.chat_view.grid(row=2, column=0, sticky="nsew", padx=10, pady=(5, 0))
-
-        # Input Frame
-        self.input_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.input_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
-        self.input_frame.grid_columnconfigure(0, weight=1)
-
-        self.input_field = ctk.CTkEntry(
-            self.input_frame,
-            placeholder_text="Type your message...",
-            font=("Arial", 14),
-        )
-        self.input_field.grid(row=0, column=0, sticky="ew", padx=(0, 10))
-        self.input_field.bind("<Return>", lambda e: self._on_send())
-
-        self.send_button = ctk.CTkButton(
-            self.input_frame, text="➤ Send", width=80, command=self._on_send
-        )
-        self.send_button.grid(row=0, column=1)
-
-    def update_status(self):
-        if self.core.is_online:
-            self.status_bar.set_online(self.core.provider.get_model_information())
-        else:
-            self.status_bar.set_offline("Provider unreachable")
-
-    def _toggle_kill_switch(self):
-        kill_switch.toggle()
-        if kill_switch.is_active:
-            self.kill_btn.configure(text="KILL SWITCH (ACTIVE)", fg_color="red")
-        else:
-            self.kill_btn.configure(text="KILL SWITCH", fg_color="gray")
-
-    def _on_send(self):
-        text = self.input_field.get().strip()
-        if not text:
-            return
-
-        # Clear input field
-        self.input_field.delete(0, ctk.END)
-
-        # Disable input while processing
-        self.input_field.configure(state="disabled")
-        self.send_button.configure(state="disabled")
-
-        # Add to UI immediately
-        self.chat_view.add_message("user", text)
-
-        # Process asynchronously in a separate thread so UI doesn't freeze
-        Thread(target=self._run_async_process, args=(text,), daemon=True).start()
-
-    def _run_async_process(self, text: str):
-        # Create a new event loop for this thread
+        
+        # UI Setup
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
+        
+        self.title("AERIS COMMAND CENTER")
+        self.geometry("1100x700")
+        self.minsize(900, 600)
+        
+        # Grid config: Sidebar (col 0, fixed), Main (col 1, expandable)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        
+        # Views Container
+        self.views = {}
+        self.current_view = None
+        
+        # Main content frame
+        self.main_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
+        self.main_container.grid(row=0, column=1, sticky="nsew")
+        self.main_container.grid_rowconfigure(0, weight=1)
+        self.main_container.grid_columnconfigure(0, weight=1)
+        
+        # Initialize views
+        self._init_views()
+        
+        # Sidebar
+        self.sidebar = Sidebar(self, nav_callback=self.show_view)
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        
+        self._start_monitor()
+        
+    def _start_monitor(self):
+        self.monitor_loop = asyncio.new_event_loop()
+        self.monitor = SystemMonitor(self.monitor_loop)
+        
+        def run_loop():
+            asyncio.set_event_loop(self.monitor_loop)
+            self.monitor.start()
+            self.monitor_loop.run_forever()
+            
+        self.monitor_thread = Thread(target=run_loop, daemon=True)
+        self.monitor_thread.start()
+        
+    def _init_views(self):
+        self.views["chat"] = ChatView(self.main_container, on_send_callback=self._process_chat_async)
+        self.views["system"] = SystemView(self.main_container)
+        self.views["tasks"] = TaskView(self.main_container)
+        self.views["security"] = SecurityView(self.main_container)
+        
+        for view in self.views.values():
+            view.grid(row=0, column=0, sticky="nsew")
+            
+    def show_view(self, view_name: str):
+        if view_name in self.views:
+            self.views[view_name].tkraise()
+            self.current_view = view_name
+            
+    def _process_chat_async(self, text: str):
+        Thread(target=self._run_core_task, args=(text,), daemon=True).start()
+        
+    def _run_core_task(self, text: str):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-
-        # Run the core process
         try:
             response = loop.run_until_complete(self.core.process_user_message(text))
-            # Schedule UI update on main thread
-            self.after(0, lambda: self._on_response_received(response))
+            if response:
+                self.views["chat"].add_message("assistant", response)
         except Exception as e:
-            err_msg = str(e)
-            self.after(0, lambda err=err_msg: self._on_response_error(err))
+            self.views["chat"].add_message("system", f"Internal Error: {e}")
         finally:
             loop.close()
-
-    def _on_response_received(self, response: str):
-        self.chat_view.add_message("assistant", response)
-        self._re_enable_input()
-
-    def _on_response_error(self, error: str):
-        self.chat_view.add_message("system", f"Internal Error: {error}")
-        self._re_enable_input()
-
-    def _re_enable_input(self):
-        self.input_field.configure(state="normal")
-        self.send_button.configure(state="normal")
-        self.input_field.focus_set()
+            
+    def destroy(self):
+        if hasattr(self, 'monitor'):
+            self.monitor.stop()
+            self.monitor_loop.call_soon_threadsafe(self.monitor_loop.stop)
+        super().destroy()

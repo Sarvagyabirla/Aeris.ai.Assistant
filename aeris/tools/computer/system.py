@@ -1,4 +1,4 @@
-import pyautogui
+
 from aeris.tools.tool import Tool
 from aeris.tools.security import PermissionLevel, PermissionManager
 from aeris.tools.types import ToolResult
@@ -43,6 +43,7 @@ class SystemTool(Tool):
             )
 
         try:
+            import pyautogui
             if action in ["volume_up", "volume_down", "volume_mute"]:
                 amount = kwargs.get("amount", 1)
 

@@ -1,4 +1,4 @@
-import pyautogui
+
 from aeris.tools.tool import Tool
 from aeris.tools.security import PermissionLevel, PermissionManager
 from aeris.tools.types import ToolResult
@@ -41,6 +41,7 @@ class MouseTool(Tool):
             )
 
         try:
+            import pyautogui
             # Important: pyautogui has a failsafe if you move the mouse to a corner,
             # we respect that as an extra safety measure.
             if action == "move":

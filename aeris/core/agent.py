@@ -77,19 +77,32 @@ class AerisAgent:
 
                         tool = self.tool_registry.get_tool(tc.name)
                         if tool:
+                            await event_manager.emit(Events.TOOL_EXECUTION_STARTED, tool_name=tc.name, args=args_dict)
                             result = await tool.execute(**args_dict)
                         else:
                             from aeris.tools.types import ToolResult
-
                             result = ToolResult(
                                 False, tc.name, "execute", "", error="Tool not found"
                             )
 
                         # Format the result appropriately
                         response_dict = result.to_dict()
+                        if response_dict.get("success", False):
+                            await event_manager.emit(Events.TOOL_EXECUTION_COMPLETED, tool_name=tc.name, result=response_dict)
+                        else:
+                            await event_manager.emit(Events.TOOL_EXECUTION_FAILED, tool_name=tc.name, error=response_dict.get("error", "Failed"))
+                            
                     except Exception as e:
                         log.error(f"Error executing tool {tc.name}: {e}")
-                        response_dict = {"success": False, "error": str(e)}
+                        if type(e).__name__ == "PermissionRequiredError":
+                            await event_manager.emit(Events.PERMISSION_STATE_CHANGED, tool_name=tc.name, state="REQUESTED", details=str(e))
+                            response_dict = {
+                                "success": False, 
+                                "error": f"{str(e)}. You MUST ask the user for confirmation. Once the user replies with 'yes' or explicitly approves, call this tool again with the argument `confirmed=True`."
+                            }
+                        else:
+                            await event_manager.emit(Events.TOOL_EXECUTION_FAILED, tool_name=tc.name, error=str(e))
+                            response_dict = {"success": False, "error": str(e)}
 
                     tool_responses.append(
                         FunctionResponse(name=tc.name, response=response_dict)

@@ -1,4 +1,4 @@
-import pygetwindow as gw
+
 from aeris.tools.tool import Tool
 from aeris.tools.security import PermissionLevel, PermissionManager
 from aeris.tools.types import ToolResult
@@ -44,6 +44,7 @@ class WindowTool(Tool):
             )
 
         try:
+            import pygetwindow as gw
             if action == "list":
                 windows = gw.getAllTitles()
                 # Filter empty titles

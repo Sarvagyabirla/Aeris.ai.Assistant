@@ -1,9 +1,12 @@
 import pytest
 import asyncio
+from aeris.core.conversation import Message
 from aeris.core.application import AerisCore
 from aeris.config.settings import settings
 from aeris.ai.types import AIResponse
 from aeris.flows.coding import CodingFlow
+
+pytestmark = pytest.mark.integration
 
 class MockProviderRegression:
     def __init__(self):

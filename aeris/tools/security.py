@@ -9,6 +9,16 @@ class PermissionLevel(IntEnum):
     LOW_RISK = 1
     MEDIUM_RISK = 2
     HIGH_RISK = 3
+    SENSITIVE = 4
+
+
+class PermissionRequiredError(Exception):
+    """Raised when a tool requires explicit user confirmation."""
+    def __init__(self, tool_name: str, level: PermissionLevel, details: str):
+        self.tool_name = tool_name
+        self.level = level
+        self.details = details
+        super().__init__(f"User confirmation required for {tool_name} (Level: {level.name}) - {details}")
 
 
 class KillSwitch:
@@ -28,6 +38,12 @@ class KillSwitch:
         log.info("Kill switch reset.")
         self._activated = False
 
+    def toggle(self):
+        if self._activated:
+            self.reset()
+        else:
+            self.activate()
+
     @property
     def is_active(self) -> bool:
         return self._activated
@@ -38,16 +54,20 @@ kill_switch = KillSwitch()
 
 
 class PermissionManager:
+    # A registry of temporarily granted permissions per conversation session
+    # Format: { "tool_name": { "action_details": True } }
+    # For now, we will handle confirmations by raising PermissionRequiredError 
+    # if it's HIGH_RISK or SENSITIVE, and let the agent loop prompt the user.
+    # The user's response will then allow the agent to retry with a confirmation flag.
+    
     @staticmethod
-    def check_execution_allowed(tool_name: str, permission_level: int) -> bool:
+    def check_execution_allowed(tool_name: str, permission_level: int, confirmed: bool = False, details: str = "") -> bool:
         """Check if execution is allowed based on security settings."""
         if kill_switch.is_active:
             log.warning(f"Execution blocked for {tool_name} by kill switch.")
             return False
 
-        # In a real system, HIGH_RISK would block and wait for UI confirmation.
-        # For Part 2 foundation, we assume the caller handles the UI confirmation
-        # before passing to execution, or we block it if it's high risk and not confirmed.
-        # We will return True if allowed, False if it needs explicit override (not implemented yet).
+        if permission_level >= PermissionLevel.HIGH_RISK and not confirmed:
+            raise PermissionRequiredError(tool_name, PermissionLevel(permission_level), details)
 
         return True

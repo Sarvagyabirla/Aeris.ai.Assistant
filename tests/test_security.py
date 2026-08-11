@@ -27,6 +27,10 @@ def test_permission_manager_levels():
     assert PermissionManager.check_execution_allowed("safe_tool", PermissionLevel.SAFE)
     assert PermissionManager.check_execution_allowed("low_risk_tool", PermissionLevel.LOW_RISK)
     
-    # Currently in Part 2 foundation, HIGH_RISK still returns True because we assume UI confirmation
-    # If we modify it in the future, this test will break and require an update.
-    assert PermissionManager.check_execution_allowed("high_risk_tool", PermissionLevel.HIGH_RISK)
+    # HIGH_RISK should raise PermissionRequiredError if not confirmed
+    from aeris.tools.security import PermissionRequiredError
+    with pytest.raises(PermissionRequiredError):
+        PermissionManager.check_execution_allowed("high_risk_tool", PermissionLevel.HIGH_RISK)
+        
+    # If confirmed, it should pass
+    assert PermissionManager.check_execution_allowed("high_risk_tool", PermissionLevel.HIGH_RISK, confirmed=True)

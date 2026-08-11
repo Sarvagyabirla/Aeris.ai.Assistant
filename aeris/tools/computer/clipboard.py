@@ -1,4 +1,4 @@
-import pyperclip
+
 from aeris.tools.tool import Tool
 from aeris.tools.security import PermissionLevel, PermissionManager
 from aeris.tools.types import ToolResult
@@ -37,6 +37,7 @@ class ClipboardTool(Tool):
             )
 
         try:
+            import pyperclip
             if action == "read":
                 content = pyperclip.paste()
                 return ToolResult(
