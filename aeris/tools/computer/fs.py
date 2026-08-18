@@ -23,6 +23,7 @@ class FileSystemTool(Tool):
         "content": {"type": "string"},
         "confirmed": {"type": "boolean", "description": "Set to True only if the user has explicitly confirmed this action."}
     }
+    required_params = ["action", "path"]  # dest_path/content/confirmed are action-specific
 
     def _is_path_allowed(self, target_path: str) -> bool:
         """Check if a path is within the allowed paths."""

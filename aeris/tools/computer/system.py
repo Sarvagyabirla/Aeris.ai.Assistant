@@ -16,9 +16,10 @@ class SystemTool(Tool):
         },
         "amount": {
             "type": "integer",
-            "description": "Number of times to press the volume key",
+            "description": "Number of times to press the volume key (default: 1)",
         },
     }
+    required_params = ["action"]  # amount is optional
 
     async def execute(self, **kwargs) -> ToolResult:
         if not PermissionManager.check_execution_allowed(

@@ -11,9 +11,10 @@ class KeyboardTool(Tool):
     permission_level = PermissionLevel.LOW_RISK
     parameters = {
         "action": {"type": "string", "enum": ["type", "press", "hotkey"]},
-        "text": {"type": "string"},
-        "keys": {"type": "array", "items": {"type": "string"}},
+        "text": {"type": "string", "description": "Text to type (for 'type' action)"},
+        "keys": {"type": "array", "items": {"type": "string"}, "description": "Key names to press (for 'press'/'hotkey' actions, e.g. ['ctrl', 'c'])"},
     }
+    required_params = ["action"]  # text/keys are action-specific
 
     async def execute(self, **kwargs) -> ToolResult:
         if not PermissionManager.check_execution_allowed(

@@ -14,10 +14,10 @@ class Settings:
         self.app_name = os.getenv("AERIS_APP_NAME", "Aeris")
         self.log_level = os.getenv("AERIS_LOG_LEVEL", "INFO")
 
-        # Part 2: Computer Control Settings
+        # Computer Control Settings
         self.dry_run = os.getenv("AERIS_DRY_RUN", "False").lower() == "true"
         self.kill_switch_enabled = (
-            os.getenv("AERIS_KILL_SWITCH", "True").lower() == "true"
+            os.getenv("AERIS_KILL_SWITCH", "False").lower() == "true"
         )
 
         # Allowed paths for filesystem operations (defaults to home dir if not specified)
@@ -33,7 +33,11 @@ class Settings:
 
         self.action_timeout = int(os.getenv("AERIS_ACTION_TIMEOUT", "10"))
 
-        # Register secrets
+        # Context window: maximum conversation messages sent to the AI per request.
+        # Keeps token costs bounded and prevents unbounded context growth.
+        self.max_context_messages = int(os.getenv("AERIS_MAX_CONTEXT_MESSAGES", "20"))
+
+        # Register secrets so they are redacted from logs
         if self.api_key:
             secret_manager.register_secret(self.api_key)
 
@@ -41,7 +45,8 @@ class Settings:
         """Validate that all required configuration is present."""
         if not self.api_key:
             raise ConfigurationError(
-                "AERIS_API_KEY is not set in environment or .env file."
+                "AERIS_API_KEY is not set. "
+                "Please copy .env.example to .env and add your API key."
             )
 
 

@@ -22,6 +22,7 @@ class AppTool(Tool):
             "description": "Full path to the executable to launch",
         },
     }
+    required_params = ["action"]  # app_name/path are action-specific
 
     async def execute(self, **kwargs) -> ToolResult:
         if not PermissionManager.check_execution_allowed(

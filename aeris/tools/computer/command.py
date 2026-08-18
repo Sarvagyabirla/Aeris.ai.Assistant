@@ -16,6 +16,7 @@ class CommandTool(Tool):
         "command": {"type": "string", "description": "Command to execute"},
         "confirmed": {"type": "boolean", "description": "Set to True only if the user has explicitly confirmed this action."}
     }
+    required_params = ["action", "command"]  # confirmed is optional
 
     async def execute(self, **kwargs) -> ToolResult:
         action = kwargs.get("action")

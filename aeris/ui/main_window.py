@@ -10,6 +10,7 @@ from aeris.ui.views.chat import ChatView
 from aeris.ui.views.system import SystemView
 from aeris.ui.views.tasks import TaskView
 from aeris.ui.views.security import SecurityView
+from aeris.app_logger.logger import log
 
 class MainWindow(ctk.CTk):
     def __init__(self, core: AerisCore):
@@ -44,6 +45,9 @@ class MainWindow(ctk.CTk):
         # Sidebar
         self.sidebar = Sidebar(self, nav_callback=self.show_view)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
+
+        # Show chat view by default
+        self.show_view("chat")
         
         self._start_monitor()
         
@@ -67,6 +71,11 @@ class MainWindow(ctk.CTk):
         
         for view in self.views.values():
             view.grid(row=0, column=0, sticky="nsew")
+
+    @property
+    def chat_view(self) -> ChatView:
+        """Convenience accessor for the chat view."""
+        return self.views["chat"]
             
     def show_view(self, view_name: str):
         if view_name in self.views:
@@ -88,7 +97,19 @@ class MainWindow(ctk.CTk):
         finally:
             loop.close()
             
+    def update_status(self):
+        """Update sidebar status indicator based on core online state."""
+        status = "IDLE" if self.core.is_online else "OFFLINE"
+        ui_state.core_status = status
+        # Trigger listeners so sidebar refreshes
+        ui_state._notify()
+
+    def add_message(self, role: str, content: str):
+        """Convenience method to add a message to the chat view."""
+        self.views["chat"].add_message(role, content)
+
     def destroy(self):
+        log.info("MainWindow shutting down.")
         if hasattr(self, 'monitor'):
             self.monitor.stop()
             self.monitor_loop.call_soon_threadsafe(self.monitor_loop.stop)

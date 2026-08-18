@@ -7,7 +7,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# Environment variables
+# Environment variables — NEVER commit actual .env
 .env
 .env.*
 !.env.example
@@ -16,9 +16,14 @@ __pycache__/
 aeris.log
 *.log
 
-# Temp files
+# Aeris runtime data
+memory.json
 temp/
 *.tmp
+test_workspace/
+
+# Screenshots taken by Aeris
+screenshot_*.png
 
 # IDE
 .vscode/

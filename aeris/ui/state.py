@@ -22,6 +22,10 @@ class UIState:
         event_manager.subscribe(Events.PERMISSION_STATE_CHANGED, self._on_permission)
         event_manager.subscribe(Events.SYSTEM_METRICS_UPDATED, self._on_metrics)
         event_manager.subscribe(Events.ERROR_OCCURRED, self._on_error)
+        event_manager.subscribe(Events.KILL_SWITCH_ACTIVATED, self._on_kill_switch_activated)
+        event_manager.subscribe(Events.KILL_SWITCH_RESET, self._on_kill_switch_reset)
+        event_manager.subscribe(Events.KILL_SWITCH_TOGGLED, self._on_kill_switch_toggled)
+        event_manager.subscribe(Events.MEMORY_UPDATED, self._on_memory_updated)
 
     def _notify(self):
         for listener in self._listeners:
@@ -81,6 +85,28 @@ class UIState:
     def _on_error(self, error: str, **kwargs):
         self.core_status = "ERROR"
         self.add_activity(f"System Error: {error}")
+        self._notify()
+
+    def _on_kill_switch_activated(self, **kwargs):
+        self.kill_switch_active = True
+        self.core_status = "STOPPED"
+        self.current_task = "KILL SWITCH ACTIVE"
+        self.add_activity("⛔ Kill Switch ACTIVATED — all computer control halted.")
+        self._notify()
+
+    def _on_kill_switch_reset(self, **kwargs):
+        self.kill_switch_active = False
+        self.core_status = "IDLE"
+        self.current_task = "Ready"
+        self.add_activity("✅ Kill Switch RESET — computer control resumed.")
+        self._notify()
+
+    def _on_kill_switch_toggled(self, active: bool = False, **kwargs):
+        self.kill_switch_active = active
+        self._notify()
+
+    def _on_memory_updated(self, key: str = "", **kwargs):
+        self.add_activity(f"Memory updated: {key}")
         self._notify()
 
     def add_activity(self, msg: str):

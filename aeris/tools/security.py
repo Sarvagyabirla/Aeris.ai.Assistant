@@ -13,15 +13,28 @@ class PermissionLevel(IntEnum):
 
 
 class PermissionRequiredError(Exception):
-    """Raised when a tool requires explicit user confirmation."""
+    """Raised when a tool requires explicit user confirmation before execution."""
+
     def __init__(self, tool_name: str, level: PermissionLevel, details: str):
         self.tool_name = tool_name
         self.level = level
         self.details = details
-        super().__init__(f"User confirmation required for {tool_name} (Level: {level.name}) - {details}")
+        super().__init__(
+            f"User confirmation required for '{tool_name}' "
+            f"(Level: {level.name}) — {details}"
+        )
 
 
 class KillSwitch:
+    """
+    Global emergency stop.
+
+    When activated:
+    - All computer-control tool executions are blocked.
+    - UI shows STOPPED state.
+    - New actions are rejected until reset() is called.
+    """
+
     _instance = None
 
     def __new__(cls):
@@ -31,22 +44,45 @@ class KillSwitch:
         return cls._instance
 
     def activate(self):
-        log.warning("KILL SWITCH ACTIVATED. Halting computer control operations.")
+        log.warning("KILL SWITCH ACTIVATED — all computer control operations halted.")
         self._activated = True
+        self._emit_event("KILL_SWITCH_ACTIVATED")
 
     def reset(self):
-        log.info("Kill switch reset.")
+        log.info("Kill switch reset — computer control operations resumed.")
         self._activated = False
+        self._emit_event("KILL_SWITCH_RESET")
 
     def toggle(self):
         if self._activated:
             self.reset()
         else:
             self.activate()
+        self._emit_event("KILL_SWITCH_TOGGLED", active=self._activated)
 
     @property
     def is_active(self) -> bool:
         return self._activated
+
+    def _emit_event(self, event_type: str, **kwargs):
+        """Fire events without creating import cycles."""
+        try:
+            from aeris.core.events import event_manager
+            import asyncio
+
+            loop = None
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                pass
+
+            if loop and loop.is_running():
+                asyncio.ensure_future(
+                    event_manager.emit(event_type, **kwargs), loop=loop
+                )
+            # If no loop is running (e.g. in tests), skip silently
+        except Exception:
+            pass  # Never let event emission crash security code
 
 
 # Singleton kill switch
@@ -54,20 +90,36 @@ kill_switch = KillSwitch()
 
 
 class PermissionManager:
-    # A registry of temporarily granted permissions per conversation session
-    # Format: { "tool_name": { "action_details": True } }
-    # For now, we will handle confirmations by raising PermissionRequiredError 
-    # if it's HIGH_RISK or SENSITIVE, and let the agent loop prompt the user.
-    # The user's response will then allow the agent to retry with a confirmation flag.
-    
+    """
+    Checks whether a tool execution is allowed given the current security state.
+
+    Rules:
+    - If kill switch is active → always block.
+    - If permission_level >= HIGH_RISK and confirmed=False → raise PermissionRequiredError.
+    - Otherwise → allow.
+    """
+
     @staticmethod
-    def check_execution_allowed(tool_name: str, permission_level: int, confirmed: bool = False, details: str = "") -> bool:
-        """Check if execution is allowed based on security settings."""
+    def check_execution_allowed(
+        tool_name: str,
+        permission_level: int,
+        confirmed: bool = False,
+        details: str = "",
+    ) -> bool:
+        """
+        Returns True if execution is allowed.
+        Raises PermissionRequiredError if explicit confirmation is required.
+        Returns False if blocked by kill switch.
+        """
         if kill_switch.is_active:
-            log.warning(f"Execution blocked for {tool_name} by kill switch.")
+            log.warning(
+                f"Execution blocked for '{tool_name}' — kill switch is active."
+            )
             return False
 
         if permission_level >= PermissionLevel.HIGH_RISK and not confirmed:
-            raise PermissionRequiredError(tool_name, PermissionLevel(permission_level), details)
+            raise PermissionRequiredError(
+                tool_name, PermissionLevel(permission_level), details
+            )
 
         return True

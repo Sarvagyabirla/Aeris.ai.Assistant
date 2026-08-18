@@ -20,14 +20,27 @@ class GeminiProvider(AIProvider):
             self.client = None
 
     def _build_function_declaration(self, tool) -> genai_types.FunctionDeclaration:
-        # Wrap parameters if needed (it assumes tool.parameters is a dict of properties)
-        # We need a valid OpenAPI schema. Usually, it's an object with properties.
+        """
+        Build a Gemini FunctionDeclaration for a tool.
+
+        Uses tool.required_params to correctly mark only the required fields.
+        Tools with optional params (save_path, title, text, etc.) are declared
+        as optional so Gemini can call them without hallucinating missing values.
+        """
         parameters = {
             "type": "OBJECT",
             "properties": tool.parameters,
         }
-        # Assuming all parameters are required for simplicity, or can be refined later.
-        required = list(tool.parameters.keys()) if tool.parameters else []
+
+        # Use the tool's declared required params list.
+        # Falls back to all params only if required_params is not defined (legacy tools).
+        required_params = getattr(tool, "required_params", None)
+        if required_params is None:
+            # Legacy fallback: all params required
+            required = list(tool.parameters.keys()) if tool.parameters else []
+        else:
+            required = required_params
+
         if required:
             parameters["required"] = required
 

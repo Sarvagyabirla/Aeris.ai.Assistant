@@ -10,13 +10,14 @@ class MouseTool(Tool):
     description = "Control the mouse: move, click, scroll."
     permission_level = PermissionLevel.LOW_RISK
     parameters = {
-        "action": {"type": "string", "enum": ["move", "click", "scroll"]},
-        "x": {"type": "integer"},
-        "y": {"type": "integer"},
-        "button": {"type": "string", "enum": ["left", "right", "middle"]},
-        "clicks": {"type": "integer"},
-        "amount": {"type": "integer"},
+        "action": {"type": "string", "enum": ["move", "click", "double_click", "right_click", "scroll"]},
+        "x": {"type": "integer", "description": "X coordinate (for move/click)"},
+        "y": {"type": "integer", "description": "Y coordinate (for move/click)"},
+        "button": {"type": "string", "enum": ["left", "right", "middle"], "description": "Mouse button (default: left)"},
+        "clicks": {"type": "integer", "description": "Number of clicks (default: 1)"},
+        "amount": {"type": "integer", "description": "Scroll amount (positive = up, negative = down)"},
     }
+    required_params = ["action"]  # x, y, button, clicks, amount are optional
 
     async def execute(self, **kwargs) -> ToolResult:
         if not PermissionManager.check_execution_allowed(

@@ -44,8 +44,7 @@ class ClipboardTool(Tool):
                     True,
                     self.name,
                     action,
-                    f"Clipboard content read successfully.",
-                    result=content,
+                    f"Clipboard content: {content[:500] if content else '(empty)'}",
                 )
             elif action == "write":
                 text = kwargs.get("text", "")
